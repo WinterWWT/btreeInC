@@ -31,6 +31,7 @@ struct result {
 #include "debug.h"
 
 void init_btree(struct btnode * root);
+void print_btree(struct btnode * root);
 int search_btnode(struct btnode * node,keytype key);
 struct result search_btree(struct btnode * root,keytype key);
 void split_btnode(struct btnode * node);
@@ -43,7 +44,25 @@ void init_btree(struct btnode * root)
 	memset(root,0,sizeof(struct btnode));
 }
 
-int count;
+void print_btree(struct btnode * root) 
+{
+	struct btnode * node = root;
+
+	if (node != NULL) {
+		printf("<");
+		for (int i = 0; i < node->keynum; i++) {
+                	printf(" %d",node->key[i]);
+        	}
+		printf(" >\n");
+
+		if (node->child[0] != NULL) {
+			for (int i = 0; i < node->keynum + 1; i++) {
+                		print_btree(node->child[i]);
+        		}
+		}
+
+	}
+}
 
 int search_btnode(struct btnode * node,keytype key)
 {
@@ -51,18 +70,12 @@ int search_btnode(struct btnode * node,keytype key)
 	
 	int i;
 
-	//printf("live in %s----1,%d.\n",__func__,node->keynum);
-
 	if (node->keynum == 0) {
-		//printf("live in %s----2.1 .\n",__func__);
 		return 0;
 	}
 
 	for (i = 0; i < node->keynum && node->key[i] <= key; i++) {
-		//printf("----count:%d.\n",count++);		
 	}
-
-	//printf("%s(): i:%d.\n",__func__,i);
 	
 	return i;
 }
@@ -106,28 +119,14 @@ struct result search_btree(struct btnode * root,keytype key)
 
 void split_btnode(struct btnode * node) 
 {		
-	printf("%s(): node: %p.\n",__func__,node);
+	//printf("%s(): node: %p.\n",__func__,node);
 	
-	//print_node("split_node",node);
-
 	//split node
 	struct btnode *bro_node = malloc(sizeof(struct btnode));
 
-//	if (node->parent == NULL) {
-//		struct btnode * new_root = malloc(sizeof(struct btnode));
-//		node->parent = new_root;
-//		new_root->child[0] = node;
-//	}
-
-	//printf("live----1.1.\n");
-
 	keytype k = node->key[(Morder)/2];      //front more than back
 
-	//printf("live----1.2.\n%p.\n",node->parent);
-
         int pos = search_btnode(node->parent,k);
-
-	//printf("live----1.3.\n");
 
 	//copy key
 	for (int i = (Morder)/2 + 1; i < Morder; i++ ) {
@@ -148,8 +147,6 @@ void split_btnode(struct btnode * node)
         bro_node->keynum = (Morder - 1)/2;
         node->keynum = (Morder)/2;
 	
-	//printf("live----1.\n");
-
 	//change node->parent
 	struct btnode * parent = node->parent;
 	//insert k to parent
@@ -158,8 +155,6 @@ void split_btnode(struct btnode * node)
         }
         parent->key[pos] = k;
 
-	//printf("live----2.\n");
-
         //insert new node to parent
         for (int i = parent->keynum; i > pos; i--) {
                 parent->child[i + 1] = parent->child[i];
@@ -167,15 +162,11 @@ void split_btnode(struct btnode * node)
 	parent->child[pos + 1] = bro_node;
         //assign keynum
         parent->keynum += 1;
-	
-	//printf("live----2.\n");
-
-	//print_node("parent",parent);
 }
 
 void insert_btnode(struct btnode * node,int pos,keytype key)
 {
-	printf("%s(): node:%p,pos:%d,key:%d.\n",__func__,node,pos,key);
+	//printf("%s(): node:%p,pos:%d,key:%d.\n",__func__,node,pos,key);
 	
 	for(int i = pos; i < node->keynum; i++) {
 		node->key[i + 1] = node->key[i]; 
@@ -183,14 +174,11 @@ void insert_btnode(struct btnode * node,int pos,keytype key)
 	node->key[pos] = key;
 
 	node->keynum++;
-//	if (node->keynum == Morder) {
-//		split_btnode(node);
-//	}
 }
 
 bool insert_btree(btree ** root,keytype key)
 {
-	printf("%s(): root:%p,key:%d.\n",__func__,*root,key);
+	//printf("%s(): root:%p,key:%d.\n",__func__,*root,key);
 	
 	btree * tree = *root;	
 
@@ -199,8 +187,6 @@ bool insert_btree(btree ** root,keytype key)
 	int tkey = key;
 	struct btnode * node = res.node;
 	
-	//printf("%s(): pos:%d.\n",__func__,pos);
-
 	int end_flag = 0;
 
 	if (res.found_tag) {
@@ -211,7 +197,6 @@ bool insert_btree(btree ** root,keytype key)
 		insert_btnode(node,pos,key);
 		
 		while(node != tree && end_flag == 0) {
-			printf("----while.\n");
 			if (node->keynum == Morder) {
 				split_btnode(node);
 			} else {
@@ -221,9 +206,7 @@ bool insert_btree(btree ** root,keytype key)
 			node = node->parent;
 		}
 		if (node == tree && end_flag == 0) {
-			//printf("----if.\n");
 			if (node->keynum == Morder) {
-				//printf("----if2.\n");
 				new_root(root);
 			} else {
 
@@ -235,7 +218,7 @@ bool insert_btree(btree ** root,keytype key)
 }
 
 void new_root(btree ** root) {
-	printf("%s(): root: %p.\n",__func__,*root);
+	//printf("%s(): root: %p.\n",__func__,*root);
 
 	struct btnode * new_root = malloc(sizeof(struct btnode));
 	memset(new_root,0,sizeof(struct btnode));
@@ -243,8 +226,6 @@ void new_root(btree ** root) {
 	(*root)->parent = new_root;
 	new_root->child[0] = *root;
 	new_root->keynum = 0;
-
-	//printf("parent: %p.\n",(*root)->parent);
 
 	split_btnode(*root);
 

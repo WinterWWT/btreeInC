@@ -38,9 +38,10 @@ int main()
         print_node("child2",my_tree->child[1]);
         print_node("child3",my_tree->child[2]);
 
-	insert_btree(&my_tree,23);
-
-	//printf("mt_tree:%p.\n",my_tree);
+	printf("-----------\n");
+	print_btree(my_tree);
+	
+	insert_btree(&my_tree,11);
 
 	print_node("my_tree",my_tree);
 	print_node("child1",my_tree->child[0]);
@@ -53,5 +54,8 @@ int main()
 	print_node("child2.1",my_tree->child[1]->child[0]);
 	print_node("child2.2",my_tree->child[1]->child[1]);
 
+	printf("-----------\n");
+	print_btree(my_tree);
+	
 	return 0;
 }

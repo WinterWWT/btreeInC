@@ -10,11 +10,24 @@ void print_node(char * s,struct btnode *node) {
         }
         printf(">\n");
 
-        printf("child is: ");
-        for (int i = 0; i < node->keynum + 1; i++) {
-                printf("%p ",node->child[i]);
-        }
+        if (node->child[0] != NULL) {
+		printf("child is: ");
+        	
+		for (int i = 0; i < node->keynum + 1; i++) {
+                	//printf("%p ",node->child[i]);
+				printf("<");
+        		
+				for (int j = 0; j < node->child[i]->keynum; j++) {
+                			printf(" %d ",node->child[i]->key[j]);
+        			}
+
+        			printf("> ");
+		}
         printf("\n\n");
+	} else {
+		
+	}
+
 }
 
 #endif
