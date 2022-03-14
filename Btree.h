@@ -168,7 +168,7 @@ void insert_btnode(struct btnode * node,int pos,keytype key)
 {
 	//printf("%s(): node:%p,pos:%d,key:%d.\n",__func__,node,pos,key);
 	
-	for(int i = pos; i < node->keynum; i++) {
+	for(int i = node->keynum - 1; i >= pos; i--) {
 		node->key[i + 1] = node->key[i]; 
 	}
 	node->key[pos] = key;
@@ -183,6 +183,7 @@ bool insert_btree(btree ** root,keytype key)
 	btree * tree = *root;	
 
 	struct result res = search_btree(tree,key);
+	//printf("pos: %d.\n",res.i);
 	int pos = res.i;
 	int tkey = key;
 	struct btnode * node = res.node;
@@ -195,6 +196,7 @@ bool insert_btree(btree ** root,keytype key)
 		return false;
 	} else {
 		insert_btnode(node,pos,key);
+		//print_node("node",node);
 		
 		while(node != tree && end_flag == 0) {
 			if (node->keynum == Morder) {
