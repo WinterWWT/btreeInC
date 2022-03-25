@@ -9,7 +9,7 @@
 
 #define MaxKeyNum (Morder - 1)
 //#define MinKeyNum (int)(ceil((double)Morder/2) - 1)
-#define MinKeyNum (Morder/2)
+#define MinKeyNum ((Morder - 1)/2)
 
 #define keytype int
 
@@ -33,11 +33,24 @@ struct result {
 void init_btree(struct btnode * root);
 void print_btree(struct btnode * root);
 int search_btnode(struct btnode * node,keytype key);
+
 struct result search_btree(struct btnode * root,keytype key);
+
 void split_btnode(struct btnode * node);
 void insert_btnode(struct btnode * node,int pos,keytype key);
-bool insert_btree(struct btnode ** root,keytype key);
 void new_root(btree ** root);
+
+bool insert_btree(struct btnode ** root,keytype key);
+
+struct btnode * find_pro(struct btnode * node);
+struct btnode * find_suc(struct btnode * node);
+void movetoright(struct btnode * node);
+void movetoleft(struct btnode * node);
+void merge(struct btnode * node);
+
+void delete_btnode(btree ** tree,struct btnode * node,int pos,keytype key);
+
+bool delete_btree(btree ** tree,keytype key);
 
 void init_btree(struct btnode * root)
 {
@@ -60,7 +73,6 @@ void print_btree(struct btnode * root)
                 		print_btree(node->child[i]);
         		}
 		}
-
 	}
 }
 
@@ -196,7 +208,6 @@ bool insert_btree(btree ** root,keytype key)
 		return false;
 	} else {
 		insert_btnode(node,pos,key);
-		//print_node("node",node);
 		
 		while(node != tree && end_flag == 0) {
 			if (node->keynum == Morder) {
@@ -219,9 +230,9 @@ bool insert_btree(btree ** root,keytype key)
 	return true;
 }
 
-void new_root(btree ** root) {
+void new_root(btree ** root) 
+{
 	//printf("%s(): root: %p.\n",__func__,*root);
-
 	struct btnode * new_root = malloc(sizeof(struct btnode));
 	memset(new_root,0,sizeof(struct btnode));
 
@@ -232,4 +243,376 @@ void new_root(btree ** root) {
 	split_btnode(*root);
 
 	*root = new_root;
+}
+
+struct btnode * find_pro(struct btnode * node) 
+{
+	struct btnode * tar = node;
+	while(node != NULL) {
+		tar = node;
+		node = node->child[node->keynum];
+	}
+
+	return tar;
+}
+
+struct btnode * find_suc(struct btnode * node)
+{
+	struct btnode * tar = node;
+	while(node != NULL) {
+		tar = node;
+		node = node->child[0];
+	}
+
+	return tar;
+}
+
+//leftbro -> node
+void movetoright(struct btnode * node) {
+	struct btnode * parent = node->parent;
+	//find pos of node in parent.
+	int pos = 0;
+	for (int i = 0; i <= parent->keynum; i++) {
+		if (parent->child[i] == node) {
+			pos = i;
+			break;
+		}
+	}
+	struct btnode * leftbro = parent->child[pos - 1];
+	
+	//node->key
+	for(int i = node->keynum - 1; i >= 0; i--) {
+		node->key[i + 1] = node->key[i];
+	}
+	node->key[0] = parent->key[pos - 1];
+
+	//node->child
+	if (leftbro->child[leftbro->keynum]) {
+		for (int i = node->keynum; i >= 0; i--) {
+			node->child[i + 1] = node->child[i];
+		}
+		node->child[0] = leftbro->child[leftbro->keynum];
+		leftbro->child[leftbro->keynum] = NULL;
+	}
+
+	//parent->key
+	node->keynum++;
+	parent->key[pos - 1] = leftbro->key[leftbro->keynum - 1];
+	leftbro->keynum--;
+}
+
+//node <- rightbro
+void movetoleft(struct btnode * node) {
+	//printf("----%s(): 1----.\n",__func__);
+	struct btnode * parent = node->parent;
+	//find pos of node in parent.
+	int pos = 0;
+	for (int i = 0; i <= parent->keynum; i++) {
+		if (parent->child[i] == node) {
+			pos = i;
+			break;
+		}
+	}
+	//printf("----%s(): 2----pos:%d,node->keynum:%d.\n",__func__,pos,node->keynum);
+	struct btnode * rightbro = parent->child[pos + 1];
+
+	//node->key
+	node->key[node->keynum] = parent->key[pos];
+	node->keynum++;
+
+	//parent->key
+	parent->key[pos] = rightbro->key[0];
+
+	//rightbro->key
+	for(int i = 0; i < rightbro->keynum - 1; i++) {
+		rightbro->key[i] = rightbro->key[i + 1];
+	}
+	rightbro->key[rightbro->keynum - 1] = 0;
+	rightbro->keynum--;
+	
+	//rightbro->child
+	if (rightbro->child[0]) {
+		node->child[node->keynum] = rightbro->child[0];
+		for (int i = 0;i < rightbro->keynum; i++) {
+			rightbro->child[i] = rightbro->child[i + 1];
+		}
+	}
+}
+
+void merge(struct btnode * node) {
+	//printf("----%s(): 1----.\n",__func__);
+
+	struct btnode * parent = node->parent;
+	//find pos of node in parent.
+        int pos = 0;
+        for (int i = 0; i <= parent->keynum; i++) {
+        	if (parent->child[i] == node) {
+                	pos = i;
+			break;
+		}
+        }
+	//printf("----%s(): 2----pos:%d.\n",__func__,pos);
+	
+	if (pos == 0) {
+		//printf("----%s(): 3.1----.\n",__func__);
+
+		//node <- node + parent + rightbro
+		struct btnode * rightbro = parent->child[pos + 1];
+		
+		//node->key
+		node->key[node->keynum] = parent->key[pos];
+		for (int i = 0;i < rightbro->keynum; i++) {
+			node->key[node->keynum + 1 + i] = rightbro->key[i];
+		}
+		//node->child
+		if (node->child[0]) {
+			//printf("----%s():3.1.1----.\n",__func__);
+
+			for (int i = 0; i < rightbro->keynum + 1; i++) {
+				node->child[node->keynum + 1 + i] = rightbro->child[i];
+				rightbro->child[i]->parent = node;
+			}
+		}
+		node->keynum = node->keynum + 1 + rightbro->keynum;
+
+		//parent->key
+		for(int i = pos; i < parent->keynum - 1; i++) {
+                        parent->key[i] = parent->key[i + 1];
+                }
+		parent->key[parent->keynum - 1] = 0;
+		//parent->child
+		for(int i = pos + 1; i < parent->keynum; i++) {
+			parent->child[i] = parent->child[i + 1];
+		}
+		parent->child[parent->keynum] = NULL;
+		parent->keynum--;
+
+		free(rightbro);
+
+	} else {
+		//printf("----%s(): 3.2----.\n",__func__);
+		
+		//node <- leftbro + parent + node
+		struct btnode * leftbro = parent->child[pos - 1];
+		//node->key
+		for (int i = node->keynum - 1; i >= 0; i--) {
+			node->key[leftbro->keynum + 1 + i] = node->key[i];
+		}
+		node->key[leftbro->keynum] = parent->key[pos - 1];
+		for(int i = 0; i < leftbro->keynum; i++) {
+			node->key[i] = leftbro->key[i];
+		}
+
+		//node->child
+		if (node->child[0]) {
+			for (int i = node->keynum; i >= 0; i--) {
+				node->child[leftbro->keynum + 1 + i] = node->child[i];
+			}
+
+			for (int i = 0; i < leftbro->keynum + 1; i++) {
+				node->child[i] = leftbro->child[i];
+				leftbro->child[i]->parent = node;
+			}
+		}
+		node->keynum = node->keynum + 1 + leftbro->keynum;
+
+		//parent->key
+		for(int i = pos - 1; i < parent->keynum - 1; i++) {
+                        parent->key[i] = parent->key[i + 1];
+                }
+		parent->key[parent->keynum - 1] = 0;
+		//parent->child
+		for(int i = pos; i < parent->keynum; i++) {
+			parent->child[i] = parent->child[i + 1];
+		}
+		parent->child[parent->keynum] = NULL;
+		parent->keynum--;
+
+		free(leftbro);
+	}
+}
+
+void delete_btnode(btree **tree, struct btnode * node,int pos,keytype key) 
+{	
+	if (node->child[0]) {
+	//内部节点
+		//printf("----%s(): 1.1----.\n",__func__);
+		//前驱
+		struct btnode * pronode = find_pro(node->child[pos]);
+		int pro_key = pronode->key[pronode->keynum - 1];	//copy key
+		//printf("----%s(): 1.1a----prokey:%d.\n",__func__,pro_key);
+		//后驱 
+		struct btnode * sucnode = find_suc(node->child[pos + 1]);
+		int suc_key = sucnode->key[0];    //copy key
+		//printf("----%s(): 1.1b----suckey:%d.\n",__func__,suc_key);
+
+	       	if (pronode->keynum > MinKeyNum) {
+			//直接前驱节点替换
+			//printf("----%s(): 1.1.1.----.\n",__func__);
+
+			node->key[pos] = pro_key;
+			pronode->key[pronode->keynum - 1] = 0;
+			pronode->keynum--;
+		} else {
+			//printf("----%s(): 1.1.2----.\n",__func__);
+			if (sucnode->keynum > MinKeyNum) {
+				//直接后驱节点替换
+				//printf("----%s(): 1.1.2.1----.\n",__func__);
+				node->key[pos] = suc_key;
+				for (int i = 0; i < sucnode->keynum - 1; i++) {
+					sucnode->key[i] = sucnode->key[i + 1];
+				}
+				sucnode->keynum--;
+			} else {
+				//printf("----%s(): 1.1.2.2----.\n",__func__);
+				if (pronode->parent->child[pronode->parent->keynum - 1]->keynum > MinKeyNum) {
+					//前驱节点替换 -> 叶子节点右旋转
+					//printf("----%s(): 1.1.2.2.1----.\n",__func__);
+                                 	node->key[pos] = pro_key;
+                                	pronode->key[pronode->keynum - 1] = 0;
+					pronode->keynum--;
+
+					movetoright(pronode);
+				} else if (sucnode->parent->child[1]->keynum > MinKeyNum) {
+					//后驱节点替换 -> 叶子节点左旋转
+					//printf("----%s(): 1.1.2.2.2----.\n",__func__);
+					node->key[pos] = suc_key;
+					for (int i = 0; i < sucnode->keynum - 1; i++) {
+						sucnode->key[i] = sucnode->key[i + 1];
+					}
+					sucnode->key[sucnode->keynum - 1] = 0;
+					sucnode->keynum--;
+						
+					movetoleft(sucnode);
+				} else {
+					//printf("----%s(): 1.1.2.2.3----.\n",__func__);
+					if (pronode->parent->keynum > MinKeyNum) {
+						//前驱节点合并
+						node->key[pos] = pro_key;
+                                        	pronode->key[pronode->keynum - 1] = 0;
+						pronode->keynum--;
+
+						merge(pronode);
+					} else if (sucnode->parent->keynum > MinKeyNum) {
+						//后驱节点合并 
+						node->key[pos] = suc_key;
+                                                sucnode->key[sucnode->keynum - 1] = 0;
+						sucnode->keynum--;
+							
+						merge(sucnode);	
+					} else {
+						//前驱节点合并-循环合并
+						node->key[pos] = pro_key;
+                                        	pronode->key[pronode->keynum - 1] = 0;
+						pronode->keynum--;
+					
+						node = pronode;
+						struct btnode * root = *tree;
+						while(node->keynum < MinKeyNum && node != root) {
+							int position = 0;
+				                 	for (int i = 0; i < node->parent->keynum; i++) {
+				                        	if (node->parent->child[i] == node) {
+				                                	position = i;
+				                                 	break;
+				                        	}
+				                 	}
+							
+							if (position != 0 && node->parent->child[position - 1]->keynum > MinKeyNum) {
+								//右旋转
+								//printf("----%s(): 2.1----.\n",__func__);
+				
+								movetoright(node);
+								break;
+							} else if (position != node->keynum && node->parent->child[position + 1]->keynum > MinKeyNum) {
+								//左旋转
+								//printf("----%s(): 2.2----.\n",__func__);
+				
+								movetoleft(node);
+								break;
+							} else {
+								//合并
+								//printf("----%s(): 2.3----.\n",__func__);
+								merge(node);
+								
+								node = node->parent;
+							}
+						}
+						
+						if (node == root && node->keynum == 0) {
+							//printf("----%s(): 2.4----,old_root:%p,new_root:%p.\n",__func__,root,node->child[0]);
+							
+							*tree = node->child[0];
+						}
+					}
+				}
+			}
+		}
+	} else {
+	//叶子节点
+		//直接删除
+		//printf("----%s(): 1.2----.\n",__func__);
+		for (int i = pos; i < node->keynum - 1; i++) {
+			node->key[i] = node->key[i + 1];
+		}
+		node->key[node->keynum - 1] = 0;
+		node->keynum--;
+
+		struct btnode * root = *tree;
+		while(node->keynum < MinKeyNum && node != root) {
+			int position = 0;
+                 	for (int i = 0; i < node->parent->keynum; i++) {
+                        	if (node->parent->child[i] == node) {
+                                	position = i;
+                                 	break;
+                        	}
+                 	}
+			
+			if (position != 0 && node->parent->child[position - 1]->keynum > MinKeyNum) {
+				//右旋转
+				//printf("----%s(): 2.1----.\n",__func__);
+
+				movetoright(node);
+				break;
+			} else if (position != node->keynum && node->parent->child[position + 1]->keynum > MinKeyNum) {
+				//左旋转
+				//printf("----%s(): 2.2----.\n",__func__);
+
+				movetoleft(node);
+				break;
+			} else {
+				//合并
+				//printf("----%s(): 2.3----.\n",__func__);
+
+				merge(node);
+				
+				node = node->parent;
+			}
+		}
+		
+		if (node == root && node->keynum == 0) {
+			//printf("----%s(): 2.4----,old_root:%p,new_root:%p.\n",__func__,root,node->child[0]);
+			
+			*tree = node->child[0];
+		}
+	}
+}
+
+bool delete_btree(btree ** tree,keytype key) 
+{
+	struct btnode * root = *tree;
+	struct result res = search_btree(root,key);
+
+	int found_tag = res.found_tag;
+	int pos = res.i;
+	struct btnode * node = res.node;
+
+	if (!found_tag) {
+		printf("key:%d doesn't exist!.\n",key);	
+
+		return false;
+	} else {
+		delete_btnode(tree,node,pos,key);
+	}
+
+	return true;
 }
