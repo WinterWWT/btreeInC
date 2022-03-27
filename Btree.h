@@ -247,24 +247,24 @@ void new_root(btree ** root)
 
 struct btnode * find_pro(struct btnode * node) 
 {
-	struct btnode * tar = node;
-	while(node != NULL) {
-		tar = node;
+	//struct btnode * tar = node;
+	while(node->child[0] != NULL) {
+		//tar = node;
 		node = node->child[node->keynum];
 	}
 
-	return tar;
+	return node;
 }
 
 struct btnode * find_suc(struct btnode * node)
 {
-	struct btnode * tar = node;
-	while(node != NULL) {
-		tar = node;
+	//struct btnode * tar = node;
+	while(node->child[0] != NULL) {
+		//tar = node;
 		node = node->child[0];
 	}
 
-	return tar;
+	return node;
 }
 
 //leftbro -> node
@@ -465,7 +465,7 @@ void delete_btnode(btree **tree, struct btnode * node,int pos,keytype key)
 				sucnode->keynum--;
 			} else {
 				//printf("----%s(): 1.1.2.2----.\n",__func__);
-				if (pronode->parent->child[pronode->parent->keynum - 1]->keynum > MinKeyNum) {
+				if (pronode->parent->child[pronode->parent->keynum - 1]->keynum > MinKeyNum && pronode->parent != node) {
 					//前驱节点替换 -> 叶子节点右旋转
 					//printf("----%s(): 1.1.2.2.1----.\n",__func__);
                                  	node->key[pos] = pro_key;
@@ -473,7 +473,7 @@ void delete_btnode(btree **tree, struct btnode * node,int pos,keytype key)
 					pronode->keynum--;
 
 					movetoright(pronode);
-				} else if (sucnode->parent->child[1]->keynum > MinKeyNum) {
+				} else if (sucnode->parent->child[1]->keynum > MinKeyNum && sucnode->parent != node) {
 					//后驱节点替换 -> 叶子节点左旋转
 					//printf("----%s(): 1.1.2.2.2----.\n",__func__);
 					node->key[pos] = suc_key;
@@ -484,6 +484,26 @@ void delete_btnode(btree **tree, struct btnode * node,int pos,keytype key)
 					sucnode->keynum--;
 						
 					movetoleft(sucnode);
+				} else if (pronode->parent == node && ((pos > 0 && node->child[pos - 1]->keynum > MinKeyNum) 
+							|| (pos < node->keynum - 1 && node->child[pos + 2]->keynum > MinKeyNum))) {
+						if (pos > 0 && node->child[pos - 1]->keynum > MinKeyNum) {
+							//前驱节点替换 -> 叶子节点右旋转
+							node->key[pos] = pro_key;
+		                                        pronode->key[pronode->keynum - 1] = 0;
+		                                        pronode->keynum--;
+		     
+		                                        movetoright(pronode);
+						} else if (pos < node->keynum - 1 && node->child[pos + 2]->keynum > MinKeyNum) {
+							//后驱节点替换 -> 叶子节点左旋转
+              			                        node->key[pos] = suc_key;
+              			                        for (int i = 0; i < sucnode->keynum - 1; i++) {
+              			                                sucnode->key[i] = sucnode->key[i + 1];
+              			                        }
+              			                        sucnode->key[sucnode->keynum - 1] = 0;
+              			                        sucnode->keynum--;
+
+              			                        movetoleft(sucnode);
+						}
 				} else {
 					//printf("----%s(): 1.1.2.2.3----.\n",__func__);
 					if (pronode->parent->keynum > MinKeyNum) {
