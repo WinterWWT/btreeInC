@@ -340,7 +340,7 @@ void movetoleft(struct btnode * node) {
 }
 
 void merge(struct btnode * node) {
-	//printf("----%s(): 1----.\n",__func__);
+	printf("----%s(): 1----.\n",__func__);
 
 	struct btnode * parent = node->parent;
 	//find pos of node in parent.
@@ -354,7 +354,7 @@ void merge(struct btnode * node) {
 	//printf("----%s(): 2----pos:%d.\n",__func__,pos);
 	
 	if (pos == 0) {
-		//printf("----%s(): 3.1----.\n",__func__);
+		printf("----%s(): 3.1----.\n",__func__);
 
 		//node <- node + parent + rightbro
 		struct btnode * rightbro = parent->child[pos + 1];
@@ -390,12 +390,13 @@ void merge(struct btnode * node) {
 		free(rightbro);
 
 	} else {
-		//printf("----%s(): 3.2----.\n",__func__);
+		printf("----%s(): 3.2----.\n",__func__);
 		
 		//node <- leftbro + parent + node
 		struct btnode * leftbro = parent->child[pos - 1];
 		//node->key
 		for (int i = node->keynum - 1; i >= 0; i--) {
+			//printf("no here.\n");
 			node->key[leftbro->keynum + 1 + i] = node->key[i];
 		}
 		node->key[leftbro->keynum] = parent->key[pos - 1];
@@ -422,7 +423,7 @@ void merge(struct btnode * node) {
                 }
 		parent->key[parent->keynum - 1] = 0;
 		//parent->child
-		for(int i = pos; i < parent->keynum; i++) {
+		for(int i = pos - 1; i < parent->keynum; i++) {
 			parent->child[i] = parent->child[i + 1];
 		}
 		parent->child[parent->keynum] = NULL;
